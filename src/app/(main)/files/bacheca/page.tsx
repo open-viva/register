@@ -102,17 +102,22 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
         setIsDownloading(true);
         setDownloadError(null);
         try {
-            // First, check if the attachment actually exists
-            const attachmentCheck = await checkBachecaAttachment(bachecaItem.id);
+            let fileName = attachmentFileName;
             
-            if (!attachmentCheck.hasAttachment) {
-                setDownloadError('Nessun allegato disponibile per questa comunicazione');
-                return;
-            }
-            
-            // Update filename if we got it from the check
-            if (attachmentCheck.fileName) {
-                setAttachmentFileName(attachmentCheck.fileName);
+            // If we don't have a filename from bacheca item, check if attachment exists
+            if (!bachecaItem.nome_file) {
+                const attachmentCheck = await checkBachecaAttachment(bachecaItem.id);
+                
+                if (!attachmentCheck.hasAttachment) {
+                    setDownloadError('Nessun allegato disponibile per questa comunicazione');
+                    return;
+                }
+                
+                // Update filename if we got it from the check
+                if (attachmentCheck.fileName) {
+                    fileName = attachmentCheck.fileName;
+                    setAttachmentFileName(fileName);
+                }
             }
             
             const downloadUrl = await getBachecaFileUrl(bachecaItem.id);
@@ -120,7 +125,7 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
                 // Create a temporary link to trigger download
                 const link = document.createElement('a');
                 link.href = downloadUrl;
-                link.download = attachmentCheck.fileName || attachmentFileName || 'allegato';
+                link.download = fileName || 'allegato';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -139,9 +144,11 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
                 <div className="border-t-[1px] overflow-hidden flex flex-col items-start text-left w-full py-4 pt-5 border-red-950">
                     <div className="flex items-start justify-between w-full">
                         <p className="text-lg font-semibold leading-6 ph-censor-text">{bachecaItem.titolo}</p>
-                        <span className="ml-2 text-accent flex-shrink-0">
-                            <Download size={18} />
-                        </span>
+                        {bachecaItem.nome_file && (
+                            <span className="ml-2 text-accent flex-shrink-0">
+                                <Download size={18} />
+                            </span>
+                        )}
                     </div>
                     <p className="text-sm mt-0.5 text-secondary font-semibold ph-censor-text">{bachecaItem.tipo_com_desc} • {bachecaItem.evento_data}</p>
                     <p className="font-normal text-sm opacity-40 mt-1 ph-censor-text">
