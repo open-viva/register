@@ -8,6 +8,9 @@ import { Drawer, DrawerClose, DrawerContent, DrawerTitle, DrawerTrigger } from "
 import { Button } from "@/components/ui/button";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 
+// The "richieste" field contains "A" when there's an attachment (Allegato in Italian)
+const ATTACHMENT_INDICATOR = 'A';
+
 type BachecaResponse = {
     read: BachecaType[];
     msg_new: BachecaType[];
@@ -87,8 +90,14 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
     const [isDownloading, setIsDownloading] = useState(false);
     
     // Check if there's an attachment available
-    // The "richieste" field contains "A" when there's an attachment (Allegato)
-    const hasAttachment = Boolean(bachecaItem.nome_file) || bachecaItem.richieste?.includes('A');
+    const hasAttachment = Boolean(bachecaItem.nome_file) || bachecaItem.richieste?.includes(ATTACHMENT_INDICATOR);
+    
+    // Get the button text for the download button
+    const getDownloadButtonText = () => {
+        if (isDownloading) return 'Scaricamento...';
+        if (bachecaItem.nome_file) return `Scarica allegato: ${bachecaItem.nome_file}`;
+        return 'Scarica allegato';
+    };
     
     const handleDownload = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -157,7 +166,7 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
                         disabled={isDownloading}
                     >
                         <Download size={18} />
-                        {isDownloading ? 'Scaricamento...' : `Scarica allegato${bachecaItem.nome_file ? `: ${bachecaItem.nome_file}` : ''}`}
+                        {getDownloadButtonText()}
                     </Button>
                 )}
                 {(!bacheca.msg_new || bacheca.msg_new.length === 0 || bacheca.msg_new.filter(item => item.id === bachecaItem.id).length === 0) ? <Button onClick={() => {
