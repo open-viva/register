@@ -59,24 +59,21 @@ const markTable: { [key: string]: number } = {
 };
 
 // Religion grades (giudizi religione) - these don't count towards average
+// Using lowercase keys only for simpler lookup
 const religionGrades: { [key: string]: number } = {
     "o": 10,    // ottimo
     "ds": 9,    // distinto
     "b": 8,     // buono
     "d": 7,     // discreto
     "s": 6,     // sufficiente
-    "ins": 5,   // insufficiente / non sufficiente
-    "O": 10,
-    "DS": 9,
-    "B": 8,
-    "D": 7,
-    "S": 6,
-    "INS": 5
+    "ins": 5    // insufficiente / non sufficiente
 };
 
+// Pre-computed set of lowercase religion grade keys for O(1) lookup
+const religionGradeKeys = new Set(Object.keys(religionGrades));
+
 function isReligionGrade(displayValue: string): boolean {
-    const normalizedValue = displayValue.toLowerCase().trim();
-    return Object.keys(religionGrades).map(k => k.toLowerCase()).includes(normalizedValue);
+    return religionGradeKeys.has(displayValue.toLowerCase().trim());
 }
 
 export async function getMarks(inputPage?: string) {
@@ -116,7 +113,7 @@ export async function getMarks(inputPage?: string) {
                     const displayValue = grade.children[1].textContent?.trim() || "-";
                     const isReligion = isReligionGrade(displayValue);
                     const decimalValue = isReligion 
-                        ? (religionGrades[displayValue] || religionGrades[displayValue.toUpperCase()] || religionGrades[displayValue.toLowerCase()] || 0)
+                        ? (religionGrades[displayValue.toLowerCase()] || 0)
                         : (markTable[displayValue] || 0);
                     // Religion grades are always blue (non-counting towards average)
                     const color = grade.children[1].classList.contains("f_reg_voto_dettaglio") || isReligion ? "blue" : "green";

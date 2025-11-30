@@ -39,7 +39,8 @@ export async function GET(request: NextRequest) {
             status: 200,
             headers,
         });
-    } catch {
+    } catch (error) {
+        console.error('Bacheca download error:', error);
         return NextResponse.json({ error: 'Failed to download file' }, { status: 500 });
     }
 }
