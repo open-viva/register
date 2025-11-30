@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
     
     try {
-        const downloadUrl = `https://web.spaggiari.eu/sif/app/default/bacheca_personale.php?action=file_download&com_id=${encodeURIComponent(comId)}`;
+        const downloadUrl = `https://web.spaggiari.eu/sif/app/default/bacheca_personale.php?action=file_download&com_id=${comId}`;
         
         const response = await fetch(downloadUrl, {
             headers: {
