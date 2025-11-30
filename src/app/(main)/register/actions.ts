@@ -5,6 +5,15 @@ import { GradeType, PeriodType, Subject } from "@/lib/types";
 import { handleAuthError } from "@/lib/api";
 import { getUserDetailsFromToken } from "@/lib/utils";
 
+// Helper function to clean up period description by removing duplicates
+function cleanPeriodDesc(desc: string): string {
+    // Trim whitespace
+    let cleaned = desc.trim();
+    // Remove duplicate ordinal patterns like "1° 1° PERIODO" -> "1° PERIODO"
+    cleaned = cleaned.replace(/(\d+°)\s+\1/g, '$1');
+    return cleaned;
+}
+
 export async function getPeriods(inputPage?: string) {
     const userData = await getUserDetailsFromToken(cookies().get("internal_token")?.value || "");
     if (!userData) {
@@ -30,7 +39,7 @@ export async function getPeriods(inputPage?: string) {
                 periods.push({
                     periodCode: (period.children[0] as HTMLAnchorElement)?.href.split("#")[1] || "",
                     periodPos: i + 1,
-                    periodDesc: period.textContent || "",
+                    periodDesc: cleanPeriodDesc(period.textContent || ""),
                 });
             });
         }
@@ -48,6 +57,27 @@ const markTable: { [key: string]: number } = {
     "8": 8, "8+": 8.25, "8½": 8.5, "9-": 8.75, "9": 9, "9+": 9.25, "9½": 9.5,
     "10-": 9.75, "10": 10
 };
+
+// Religion grades (giudizi religione) - these don't count towards average
+const religionGrades: { [key: string]: number } = {
+    "o": 10,    // ottimo
+    "ds": 9,    // distinto
+    "b": 8,     // buono
+    "d": 7,     // discreto
+    "s": 6,     // sufficiente
+    "ins": 5,   // insufficiente / non sufficiente
+    "O": 10,
+    "DS": 9,
+    "B": 8,
+    "D": 7,
+    "S": 6,
+    "INS": 5
+};
+
+function isReligionGrade(displayValue: string): boolean {
+    const normalizedValue = displayValue.toLowerCase().trim();
+    return Object.keys(religionGrades).map(k => k.toLowerCase()).includes(normalizedValue);
+}
 
 export async function getMarks(inputPage?: string) {
     const userData = await getUserDetailsFromToken(cookies().get("internal_token")?.value || "");
@@ -83,14 +113,21 @@ export async function getMarks(inputPage?: string) {
                 const subjectName = row.children[0].textContent?.trim().toUpperCase() || "";
                 const grades = Array.from(row.children).filter((cell) => cell.classList.contains("cella_voto"));
                 grades.map((grade) => {
+                    const displayValue = grade.children[1].textContent?.trim() || "-";
+                    const isReligion = isReligionGrade(displayValue);
+                    const decimalValue = isReligion 
+                        ? (religionGrades[displayValue] || religionGrades[displayValue.toUpperCase()] || religionGrades[displayValue.toLowerCase()] || 0)
+                        : (markTable[displayValue] || 0);
+                    // Religion grades are always blue (non-counting towards average)
+                    const color = grade.children[1].classList.contains("f_reg_voto_dettaglio") || isReligion ? "blue" : "green";
                     marks.push({
                         subjectId: Number(subjectIds[subjectIndex]) || 0,
                         subjectDesc: subjectName.trim(),
                         evtId: Number(grade.getAttribute("evento_id")) || 0,
                         evtDate: grade.children[0].textContent?.trim() || "",
-                        decimalValue: markTable[grade.children[1].textContent?.trim() || "-"] || 0,
-                        displayValue: grade.children[1].textContent?.trim() || "-",
-                        color: grade.children[1].classList.contains("f_reg_voto_dettaglio") ? "blue" : "green",
+                        decimalValue: decimalValue,
+                        displayValue: displayValue,
+                        color: color,
                         periodDesc: period.periodDesc,
                         componentDesc: grade.children[1].getAttribute("title") || "",
                     });
