@@ -123,9 +123,11 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
                 // Get filename from content-disposition header
                 const contentDisposition = response.headers.get('content-disposition') || '';
                 let fileName = attachmentFileName || 'allegato';
-                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                // Match filename with or without quotes: filename="name.ext" or filename=name.ext
+                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=(?:(['"])([^'"]*)\1|([^;\n]*))/);
                 if (filenameMatch) {
-                    fileName = filenameMatch[1].replace(/['"]/g, '');
+                    // Use the quoted filename (group 2) or unquoted filename (group 3)
+                    fileName = (filenameMatch[2] || filenameMatch[3] || fileName).trim();
                     setAttachmentFileName(fileName);
                 }
                 
