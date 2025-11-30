@@ -1,20 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getBacheca, getBachecaFileUrl, setReadBachecaItem } from "../actions";
+import { getBacheca, getBachecaFileUrl, setReadBachecaItem, checkBachecaAttachment } from "../actions";
 import { BachecaType } from "@/lib/types";
 import { Input } from "@/components/Input";
 import { Download, Search, X } from "lucide-react";
 import { Drawer, DrawerClose, DrawerContent, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
-
-// The "richieste" field contains "A" when there's an attachment (Allegato in Italian)
-// The check is case-insensitive as the API may return lowercase
-const ATTACHMENT_INDICATOR = 'A';
-const hasAttachmentIndicator = (richieste: string | undefined | null): boolean => {
-    if (!richieste) return false;
-    return richieste.toUpperCase().includes(ATTACHMENT_INDICATOR);
-};
 
 type BachecaResponse = {
     read: BachecaType[];
@@ -93,16 +85,13 @@ export default function Page() {
 
 function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: BachecaType; setBacheca: React.Dispatch<React.SetStateAction<BachecaResponse>>; bacheca: BachecaResponse }) {
     const [isDownloading, setIsDownloading] = useState(false);
-    
-    // Check if there's an attachment available
-    // nome_file can be a string with the filename, or null/empty if no attachment
-    // richieste field contains "A" (case-insensitive) when there's an attachment
-    const hasAttachment = Boolean(bachecaItem.nome_file?.trim()) || hasAttachmentIndicator(bachecaItem.richieste);
+    const [downloadError, setDownloadError] = useState<string | null>(null);
+    const [attachmentFileName, setAttachmentFileName] = useState<string | null>(bachecaItem.nome_file || null);
     
     // Get the button text for the download button
     const getDownloadButtonText = () => {
-        if (isDownloading) return 'Scaricamento...';
-        if (bachecaItem.nome_file) return `Scarica allegato: ${bachecaItem.nome_file}`;
+        if (isDownloading) return 'Verifica allegato...';
+        if (attachmentFileName) return `Scarica allegato: ${attachmentFileName}`;
         return 'Scarica allegato';
     };
     
@@ -111,19 +100,34 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
         if (isDownloading) return;
         
         setIsDownloading(true);
+        setDownloadError(null);
         try {
+            // First, check if the attachment actually exists
+            const attachmentCheck = await checkBachecaAttachment(bachecaItem.id);
+            
+            if (!attachmentCheck.hasAttachment) {
+                setDownloadError('Nessun allegato disponibile per questa comunicazione');
+                return;
+            }
+            
+            // Update filename if we got it from the check
+            if (attachmentCheck.fileName) {
+                setAttachmentFileName(attachmentCheck.fileName);
+            }
+            
             const downloadUrl = await getBachecaFileUrl(bachecaItem.id);
             if (downloadUrl) {
                 // Create a temporary link to trigger download
                 const link = document.createElement('a');
                 link.href = downloadUrl;
-                link.download = bachecaItem.nome_file || 'allegato';
+                link.download = attachmentCheck.fileName || attachmentFileName || 'allegato';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
             }
         } catch (error) {
             console.error('Download error:', error);
+            setDownloadError('Errore durante il download');
         } finally {
             setIsDownloading(false);
         }
@@ -135,11 +139,9 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
                 <div className="border-t-[1px] overflow-hidden flex flex-col items-start text-left w-full py-4 pt-5 border-red-950">
                     <div className="flex items-start justify-between w-full">
                         <p className="text-lg font-semibold leading-6 ph-censor-text">{bachecaItem.titolo}</p>
-                        {hasAttachment && (
-                            <span className="ml-2 text-accent flex-shrink-0">
-                                <Download size={18} />
-                            </span>
-                        )}
+                        <span className="ml-2 text-accent flex-shrink-0">
+                            <Download size={18} />
+                        </span>
                     </div>
                     <p className="text-sm mt-0.5 text-secondary font-semibold ph-censor-text">{bachecaItem.tipo_com_desc} • {bachecaItem.evento_data}</p>
                     <p className="font-normal text-sm opacity-40 mt-1 ph-censor-text">
@@ -165,16 +167,17 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
                         );
                     })}
                 </p>
-                {hasAttachment && (
-                    <Button 
-                        onClick={handleDownload} 
-                        variant="outline" 
-                        className="mt-6 w-full flex items-center gap-2"
-                        disabled={isDownloading}
-                    >
-                        <Download size={18} />
-                        {getDownloadButtonText()}
-                    </Button>
+                <Button 
+                    onClick={handleDownload} 
+                    variant="outline" 
+                    className="mt-6 w-full flex items-center gap-2"
+                    disabled={isDownloading}
+                >
+                    <Download size={18} />
+                    {getDownloadButtonText()}
+                </Button>
+                {downloadError && (
+                    <p className="text-sm text-red-500 mt-2 text-center">{downloadError}</p>
                 )}
                 {(!bacheca.msg_new || bacheca.msg_new.length === 0 || bacheca.msg_new.filter(item => item.id === bachecaItem.id).length === 0) ? <Button onClick={() => {
                     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
