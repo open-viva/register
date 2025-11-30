@@ -7,7 +7,8 @@ import { getUserDetailsFromToken } from "@/lib/utils";
 import { cookies } from "next/headers";
 
 export async function getUserPermissions() {
-    const userData = await getUserDetailsFromToken(cookies().get("internal_token")?.value || "");
+    const cookieStore = await cookies();
+    const userData = await getUserDetailsFromToken(cookieStore.get("internal_token")?.value || "");
     if (!userData) {
         return handleAuthError();
     }
@@ -27,7 +28,8 @@ export async function getUserPermissions() {
 }
 
 export async function hasUserAcceptedSocialTerms() {
-    const userData = await getUserDetailsFromToken(cookies().get("internal_token")?.value || "");
+    const cookieStore = await cookies();
+    const userData = await getUserDetailsFromToken(cookieStore.get("internal_token")?.value || "");
     if (!userData) {
         return handleAuthError();
     }
@@ -45,7 +47,8 @@ export async function hasUserAcceptedSocialTerms() {
 }
 
 export async function acceptSocialTerms() {
-    const userData = await getUserDetailsFromToken(cookies().get("internal_token")?.value || "");
+    const cookieStore = await cookies();
+    const userData = await getUserDetailsFromToken(cookieStore.get("internal_token")?.value || "");
     if (!userData) {
         return handleAuthError();
     }
@@ -65,7 +68,8 @@ export async function acceptSocialTerms() {
 }
 
 export async function revokeSocialTerms() {
-    const userData = await getUserDetailsFromToken(cookies().get("internal_token")?.value || "");
+    const cookieStore = await cookies();
+    const userData = await getUserDetailsFromToken(cookieStore.get("internal_token")?.value || "");
     if (!userData) {
         return handleAuthError();
     }

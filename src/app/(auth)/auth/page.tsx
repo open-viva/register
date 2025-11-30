@@ -29,7 +29,6 @@ export default function Page() {
       try {
         const error = await getUserSession({ uid, pass });
         localStorage.setItem("username", uid);
-        localStorage.setItem("password", pass);
         if (error) {
           showError(error);
         } else {

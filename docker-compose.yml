@@ -1,0 +1,19 @@
+services:
+  sysregister:
+    build: .
+    container_name: sysregister-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/data/database.db
+      - JWT_SECRET=${JWT_SECRET:-changeme-generate-a-secure-random-key}
+      - NEXT_PUBLIC_POSTHOG_KEY=${NEXT_PUBLIC_POSTHOG_KEY:-}
+      - NEXT_PUBLIC_POSTHOG_HOST=${NEXT_PUBLIC_POSTHOG_HOST:-}
+    volumes:
+      # Persistent database storage
+      - ./data:/app/data
+      # Persistent user assets (avatars, banners)
+      - ./userassets:/app/public/userassets
+    restart: unless-stopped
+    command: sh -c "npx prisma migrate deploy && node server.js"
