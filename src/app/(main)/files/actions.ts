@@ -63,8 +63,17 @@ export async function checkBachecaAttachment(comId: string): Promise<{ hasAttach
         return { hasAttachment: false };
     }
     
+    // Validate comId format - should be alphanumeric to prevent URL injection
+    if (!/^[a-zA-Z0-9_-]+$/.test(comId)) {
+        return { hasAttachment: false };
+    }
+    
     const token = cookies().get("token")?.value;
-    const downloadUrl = `https://web.spaggiari.eu/sif/app/default/bacheca_personale.php?action=file_download&com_id=${comId}`;
+    const downloadUrl = `https://web.spaggiari.eu/sif/app/default/bacheca_personale.php?action=file_download&com_id=${encodeURIComponent(comId)}`;
+    
+    // Create an AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
         const response = await fetch(downloadUrl, {
@@ -73,7 +82,10 @@ export async function checkBachecaAttachment(comId: string): Promise<{ hasAttach
                 'Cookie': `PHPSESSID=${token}; webidentity=${userData.uid};`,
             },
             redirect: 'follow',
+            signal: controller.signal,
         });
+        
+        clearTimeout(timeoutId);
         
         if (!response.ok) {
             return { hasAttachment: false };
@@ -94,6 +106,7 @@ export async function checkBachecaAttachment(comId: string): Promise<{ hasAttach
         
         if (isAttachment) {
             // Extract filename from content-disposition header
+            // Pattern matches: filename="name.ext" or filename=name.ext (with or without quotes)
             const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
             const fileName = filenameMatch ? filenameMatch[1].replace(/['"]/g, '') : undefined;
             return { hasAttachment: true, fileName };
@@ -101,6 +114,7 @@ export async function checkBachecaAttachment(comId: string): Promise<{ hasAttach
         
         return { hasAttachment: false };
     } catch {
+        clearTimeout(timeoutId);
         return { hasAttachment: false };
     }
 }

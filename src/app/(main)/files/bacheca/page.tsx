@@ -90,7 +90,7 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
     
     // Get the button text for the download button
     const getDownloadButtonText = () => {
-        if (isDownloading) return 'Verifica allegato...';
+        if (isDownloading) return 'Caricamento...';
         if (attachmentFileName) return `Scarica allegato: ${attachmentFileName}`;
         return 'Scarica allegato';
     };
