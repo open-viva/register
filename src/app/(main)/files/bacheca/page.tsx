@@ -9,7 +9,12 @@ import { Button } from "@/components/ui/button";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 
 // The "richieste" field contains "A" when there's an attachment (Allegato in Italian)
+// The check is case-insensitive as the API may return lowercase
 const ATTACHMENT_INDICATOR = 'A';
+const hasAttachmentIndicator = (richieste: string | undefined | null): boolean => {
+    if (!richieste) return false;
+    return richieste.toUpperCase().includes(ATTACHMENT_INDICATOR);
+};
 
 type BachecaResponse = {
     read: BachecaType[];
@@ -90,7 +95,9 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
     const [isDownloading, setIsDownloading] = useState(false);
     
     // Check if there's an attachment available
-    const hasAttachment = Boolean(bachecaItem.nome_file) || bachecaItem.richieste?.includes(ATTACHMENT_INDICATOR);
+    // nome_file can be a string with the filename, or null/empty if no attachment
+    // richieste field contains "A" (case-insensitive) when there's an attachment
+    const hasAttachment = Boolean(bachecaItem.nome_file?.trim()) || hasAttachmentIndicator(bachecaItem.richieste);
     
     // Get the button text for the download button
     const getDownloadButtonText = () => {
