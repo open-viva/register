@@ -44,3 +44,15 @@ export async function setReadBachecaItem(itemId: string) {
     });
     return true;
 }
+
+export async function getBachecaFileUrl(comId: string): Promise<string | void> {
+    const userData = await getUserDetailsFromToken(cookies().get("internal_token")?.value || "");
+    if (!userData) {
+        return handleAuthError();
+    }
+    
+    // Return the download URL with auth info encoded
+    // The file download will be handled client-side using this URL
+    const token = cookies().get("token")?.value;
+    return `/api/bacheca-download?comId=${encodeURIComponent(comId)}&token=${encodeURIComponent(token || '')}&uid=${encodeURIComponent(userData.uid)}`;
+}

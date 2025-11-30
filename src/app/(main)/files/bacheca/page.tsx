@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getBacheca, setReadBachecaItem } from "../actions";
+import { getBacheca, getBachecaFileUrl, setReadBachecaItem } from "../actions";
 import { BachecaType } from "@/lib/types";
 import { Input } from "@/components/Input";
-import { Search, X } from "lucide-react";
+import { Download, Search, X } from "lucide-react";
 import { Drawer, DrawerClose, DrawerContent, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
@@ -84,11 +84,43 @@ export default function Page() {
 }
 
 function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: BachecaType; setBacheca: React.Dispatch<React.SetStateAction<BachecaResponse>>; bacheca: BachecaResponse }) {
+    const [isDownloading, setIsDownloading] = useState(false);
+    
+    const handleDownload = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (isDownloading) return;
+        
+        setIsDownloading(true);
+        try {
+            const downloadUrl = await getBachecaFileUrl(bachecaItem.id);
+            if (downloadUrl) {
+                // Create a temporary link to trigger download
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = bachecaItem.nome_file || 'allegato';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        } catch (error) {
+            console.error('Download error:', error);
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+    
     return (
         <Drawer disablePreventScroll={false}>
             <DrawerTrigger className="w-full focus:outline-none">
                 <div className="border-t-[1px] overflow-hidden flex flex-col items-start text-left w-full py-4 pt-5 border-red-950">
-                    <p className="text-lg font-semibold leading-6 ph-censor-text">{bachecaItem.titolo}</p>
+                    <div className="flex items-start justify-between w-full">
+                        <p className="text-lg font-semibold leading-6 ph-censor-text">{bachecaItem.titolo}</p>
+                        {bachecaItem.nome_file && (
+                            <span className="ml-2 text-accent flex-shrink-0">
+                                <Download size={18} />
+                            </span>
+                        )}
+                    </div>
                     <p className="text-sm mt-0.5 text-secondary font-semibold ph-censor-text">{bachecaItem.tipo_com_desc} • {bachecaItem.evento_data}</p>
                     <p className="font-normal text-sm opacity-40 mt-1 ph-censor-text">
                         {bachecaItem?.testo?.length > 200
@@ -113,9 +145,20 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
                         );
                     })}
                 </p>
+                {bachecaItem.nome_file && (
+                    <Button 
+                        onClick={handleDownload} 
+                        variant="outline" 
+                        className="mt-6 w-full flex items-center gap-2"
+                        disabled={isDownloading}
+                    >
+                        <Download size={18} />
+                        {isDownloading ? 'Scaricamento...' : `Scarica allegato: ${bachecaItem.nome_file}`}
+                    </Button>
+                )}
                 {(!bacheca.msg_new || bacheca.msg_new.length === 0 || bacheca.msg_new.filter(item => item.id === bachecaItem.id).length === 0) ? <Button onClick={() => {
                     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-                }} className="mt-12 w-full">Chiudi</Button> : <><Button onClick={() => {
+                }} className="mt-6 w-full">Chiudi</Button> : <><Button onClick={() => {
                     setReadBachecaItem(bachecaItem.id_relazione);
                     setBacheca({
                         ...bacheca,
@@ -128,7 +171,7 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
                         read: Array.isArray(bacheca.read) ? [bachecaItem, ...bacheca.read] : [bachecaItem]
                     }));
                     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-                }} className="mt-12 w-full">Chiudi e segna come letto</Button>
+                }} className="mt-6 w-full">Chiudi e segna come letto</Button>
                     <DrawerClose className="w-full pt-4 text-sm">
                         Chiudi senza segnare come letto
                     </DrawerClose></>}
