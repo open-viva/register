@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getBacheca, getBachecaFileUrl, setReadBachecaItem, checkBachecaAttachment } from "../actions";
+import { getBacheca, getBachecaFileUrl, setReadBachecaItem } from "../actions";
 import { BachecaType } from "@/lib/types";
 import { Input } from "@/components/Input";
 import { Download, Search, X } from "lucide-react";
@@ -102,28 +102,45 @@ function BachecaEntry({ bachecaItem, setBacheca, bacheca }: { bachecaItem: Bache
         setIsDownloading(true);
         setDownloadError(null);
         try {
-            // First, check if the attachment actually exists
-            const attachmentCheck = await checkBachecaAttachment(bachecaItem.id);
-            
-            if (!attachmentCheck.hasAttachment) {
-                setDownloadError('Nessun allegato disponibile per questa comunicazione');
-                return;
-            }
-            
-            // Update filename if we got it from the check
-            if (attachmentCheck.fileName) {
-                setAttachmentFileName(attachmentCheck.fileName);
-            }
-            
             const downloadUrl = await getBachecaFileUrl(bachecaItem.id);
             if (downloadUrl) {
-                // Create a temporary link to trigger download
+                // Fetch the file to check if it exists and get the filename
+                const response = await fetch(downloadUrl);
+                
+                if (!response.ok) {
+                    setDownloadError('Nessun allegato disponibile per questa comunicazione');
+                    return;
+                }
+                
+                // Check content-type to see if it's a real file or an error page
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('text/html')) {
+                    // Server returned HTML, likely an error page
+                    setDownloadError('Nessun allegato disponibile per questa comunicazione');
+                    return;
+                }
+                
+                // Get filename from content-disposition header
+                const contentDisposition = response.headers.get('content-disposition') || '';
+                let fileName = attachmentFileName || 'allegato';
+                // Match filename with or without quotes: filename="name.ext" or filename=name.ext
+                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=(?:(['"])([^'"]*)\1|([^;\n]*))/);
+                if (filenameMatch) {
+                    // Use the quoted filename (group 2) or unquoted filename (group 3)
+                    fileName = (filenameMatch[2] || filenameMatch[3] || fileName).trim();
+                    setAttachmentFileName(fileName);
+                }
+                
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = attachmentCheck.fileName || attachmentFileName || 'allegato';
+                link.href = url;
+                link.download = fileName;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
             }
         } catch (error) {
             console.error('Download error:', error);
