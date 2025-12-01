@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
         
         const response = await fetch(downloadUrl, {
             headers: {
-                'Cookie': `PHPSESSID=${token}; webidentity=${uid}; Webrole=gen`,
+                'Cookie': `PHPSESSID=${token}; webidentity=${uid}`,
             },
             redirect: 'follow',
         });
