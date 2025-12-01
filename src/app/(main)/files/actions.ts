@@ -79,7 +79,7 @@ export async function checkBachecaAttachment(comId: string): Promise<{ hasAttach
         const response = await fetch(downloadUrl, {
             method: 'GET',
             headers: {
-                'Cookie': `PHPSESSID=${token}; webidentity=${userData.uid};`,
+                'Cookie': `PHPSESSID=${token}; Webidentity=${userData.uid}; Webrole=gen`,
             },
             redirect: 'follow',
             signal: controller.signal,
