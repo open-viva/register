@@ -25,45 +25,27 @@ export async function GET(request: NextRequest) {
             redirect: 'follow',
         });
         
-        if (!response.ok) {
-            return NextResponse.json({ error: 'Failed to download file' }, { status: response.status });
-        }
-        
-        const contentType = response.headers.get('content-type') || 'application/octet-stream';
-        const contentDisposition = response.headers.get('content-disposition') || '';
-        
-        // Check if the response is HTML (error page from Spaggiari)
-        // The Spaggiari server returns 200 OK with HTML when there's no attachment
-        if (contentType.includes('text/html')) {
-            return NextResponse.json({ error: 'No attachment available' }, { status: 404 });
-        }
-        
-        // Check if the response is a valid file attachment
-        // The contentDisposition header indicates a file attachment when present and non-empty
-        const hasContentDisposition = contentDisposition.length > 0;
-        const isAttachment = contentDisposition.includes('attachment') || 
-            contentType.includes('application/pdf') ||
-            contentType.includes('application/octet-stream') ||
-            contentType.includes('image/') ||
-            contentType.includes('application/zip') ||
-            contentType.includes('application/msword') ||
-            contentType.includes('application/vnd.') ||
-            hasContentDisposition;
-        
-        if (!isAttachment) {
-            return NextResponse.json({ error: 'No attachment available' }, { status: 404 });
-        }
-        
+        // Simply pass through the response from ClasseViva
         const arrayBuffer = await response.arrayBuffer();
         
         const headers = new Headers();
-        headers.set('Content-Type', contentType);
+        
+        // Forward relevant headers from the original response
+        const contentType = response.headers.get('content-type');
+        if (contentType) {
+            headers.set('Content-Type', contentType);
+        }
+        
+        const contentDisposition = response.headers.get('content-disposition');
         if (contentDisposition) {
             headers.set('Content-Disposition', contentDisposition);
         }
         
+        // Set content-length based on actual arrayBuffer size
+        headers.set('Content-Length', String(arrayBuffer.byteLength));
+        
         return new NextResponse(arrayBuffer, {
-            status: 200,
+            status: response.status,
             headers,
         });
     } catch (error) {
