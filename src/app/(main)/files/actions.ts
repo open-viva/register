@@ -63,8 +63,8 @@ export async function checkBachecaAttachment(comId: string): Promise<{ hasAttach
         return { hasAttachment: false };
     }
     
-    // Validate comId format - should be alphanumeric to prevent URL injection
-    if (!/^[a-zA-Z0-9_-]+$/.test(comId)) {
+    // Validate comId format - should start with alphanumeric and contain only alphanumeric, underscore, or hyphen
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(comId)) {
         return { hasAttachment: false };
     }
     
@@ -79,7 +79,7 @@ export async function checkBachecaAttachment(comId: string): Promise<{ hasAttach
         const response = await fetch(downloadUrl, {
             method: 'GET',
             headers: {
-                'Cookie': `PHPSESSID=${token}; webidentity=${userData.uid};`,
+                'Cookie': `PHPSESSID=${token}; webidentity=${userData.uid}`,
             },
             redirect: 'follow',
             signal: controller.signal,
