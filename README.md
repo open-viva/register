@@ -12,7 +12,7 @@ this is the modern, revived version of *syswhitedev’s sysregister*, rebuilt fo
 classeviva’s api endpoints are geoblocked and blocklist several public ip ranges (including many vps providers, vercel, etc.).
 to bypass this limitation, the recommended setup is to selfhost your own instance and expose it securely through a cloudflare tunnel.
 
-## how to selfhost your instance 🚀
+## how to selfhost your instance of register🚀
 
 ### 1. clone the project
 
